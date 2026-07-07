@@ -1,0 +1,68 @@
+{
+  "readings": [
+    {
+      "id": "FLOOD-2024-001",
+      "timestamp": "2024-07-07T10:00:00Z",
+      "location": "Rural Farm County, Kansas",
+      "value": 2.3,
+      "unit": "meters",
+      "description": "Water level in river channel during normal flow period"
+    },
+    {
+      "id": "FLOOD-2024-002",
+      "timestamp": "2024-07-07T12:00:00Z",
+      "location": "Rural Farm County, Kansas",
+      "value": 3.8,
+      "unit": "meters",
+      "description": "Heavy rainfall event beginning, water level rises"
+    },
+    {
+      "id": "FLOOD-2024-003",
+      "timestamp": "2024-07-07T14:00:00Z",
+      "location": "Rural Farm County, Kansas",
+      "value": 5.2,
+      "unit": "meters",
+      "description": "Flash flood warning issued, water level crosses moderate threshold"
+    },
+    {
+      "id": "FLOOD-2024-004",
+      "timestamp": "2024-07-07T16:00:00Z",
+      "location": "Rural Farm County, Kansas",
+      "value": 6.8,
+      "unit": "meters",
+      "description": "Severe flooding conditions, water level at critical threshold"
+    },
+    {
+      "id": "FLOOD-2024-005",
+      "timestamp": "2024-07-07T18:00:00Z",
+      "location": "Rural Farm County, Kansas",
+      "value": 7.9,
+      "unit": "meters",
+      "description": "Extreme flood event, water level significantly above threshold"
+    },
+    {
+      "id": "FLOOD-2024-006",
+      "timestamp": "2024-07-07T20:00:00Z",
+      "location": "Rural Farm County, Kansas",
+      "value": 6.5,
+      "unit": "meters",
+      "description": "Water level receding but still above threshold"
+    },
+    {
+      "id": "FLOOD-2024-007",
+      "timestamp": "2024-07-07T22:00:00Z",
+      "location": "Rural Farm County, Kansas",
+      "value": 4.1,
+      "unit": "meters",
+      "description": "Water level returning to normal after flooding event"
+    },
+    {
+      "id": "FLOOD-2024-008",
+      "timestamp": "2024-07-08T00:00:00Z",
+      "location": "Rural Farm County, Kansas",
+      "value": 2.5,
+      "unit": "meters",
+      "description": "Water level back to normal levels"
+    }
+  ]
+}

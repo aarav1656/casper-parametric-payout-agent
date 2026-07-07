@@ -1,0 +1,28 @@
+{
+  "name": "parametric-payout-agent",
+  "version": "0.1.0",
+  "description": "Autonomous insurance payout agent for Casper",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "provider": "tsx src/data-provider.ts",
+    "cli": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "tsx src/test.ts"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "openai": "^6.45.0",
+    "casper-js-sdk": "^5.0.12",
+    "dotenv": "^16.3.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "tsx": "^4.1.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.6"
+  }
+}
