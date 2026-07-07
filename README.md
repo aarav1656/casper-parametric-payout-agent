@@ -29,10 +29,3 @@ Policy creation, premium deposit, data request, threshold proof, payout, rejecti
 ## Main risk
 
 Oracle trust. Use multi-source placeholder design and show challenge path.
-
-## Docs
-
-- [PRD](PRD.md)
-- [Build Plan](BUILD_PLAN.md)
-- [Demo and Submission](DEMO_AND_SUBMISSION.md)
-- [Risk Register](RISK_REGISTER.md)
