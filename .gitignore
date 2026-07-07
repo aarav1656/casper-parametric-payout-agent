@@ -9,7 +9,8 @@ out/
 
 # Rust / Odra
 target/
-wasm/
+# Contract wasm build output only (web/public/wasm is tracked for proxy caller)
+contract/wasm/
 /tmp/
 
 # OS / IDE

@@ -188,7 +188,7 @@ export default function PayoutPanel({ policy, onEvaluated, onSubmitted }: Payout
               owner key (the oracle authority for this MVP) can execute it, and the policy ID
               must already exist. Connect that key to submit; any other signer or an unknown
               policy will see the contract revert on testnet.cspr.live. Readings and
-              thresholds round to the nearest whole meter for the contract's u64 fields.
+              thresholds round to the nearest whole meter for the contract u64 fields.
             </p>
             <button
               type="button"

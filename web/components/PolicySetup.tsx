@@ -7,7 +7,7 @@ import {
   explorerDeployUrl,
 } from "@/lib/casper";
 import {
-  csprToMotes,
+  csprToMotesString,
   parsePolicyId,
   parseThreshold,
   PolicyFormState,
@@ -16,6 +16,7 @@ import { useWallet } from "@/lib/wallet";
 import styles from "./PolicyPanel.module.css";
 
 const CONTRACT_HASH = process.env.NEXT_PUBLIC_CONTRACT_HASH;
+const CONTRACT_PACKAGE_HASH = process.env.NEXT_PUBLIC_CONTRACT_PACKAGE_HASH;
 
 interface PolicySetupProps {
   policy: PolicyFormState;
@@ -48,7 +49,7 @@ export default function PolicySetup({ policy }: PolicySetupProps) {
         {
           policyId,
           insuredPublicKeyHex: policy.insured,
-          payoutAmountMotes: csprToMotes(policy.payoutAmountCspr).replace(/,/g, ""),
+          payoutAmountMotes: csprToMotesString(policy.payoutAmountCspr),
           threshold: Math.round(threshold),
         }
       );
@@ -71,11 +72,11 @@ export default function PolicySetup({ policy }: PolicySetupProps) {
   }
 
   async function fundPool() {
-    if (!CONTRACT_HASH || !wallet.publicKeyHex) {
-      setStatus("Connect wallet and set NEXT_PUBLIC_CONTRACT_HASH.");
+    if (!CONTRACT_PACKAGE_HASH || !wallet.publicKeyHex) {
+      setStatus("Connect wallet and set NEXT_PUBLIC_CONTRACT_PACKAGE_HASH.");
       return;
     }
-    const motes = csprToMotes(fundCspr).replace(/,/g, "");
+    const motes = csprToMotesString(fundCspr);
     if (motes === "0") {
       setStatus("Enter a positive fund amount.");
       return;
@@ -84,10 +85,10 @@ export default function PolicySetup({ policy }: PolicySetupProps) {
     setBusy("fund");
     setStatus(null);
     try {
-      const { deployJson, deployHashHex } = buildFundPoolDeploy(
-        CONTRACT_HASH,
+      const { deployJson, deployHashHex } = await buildFundPoolDeploy(
+        CONTRACT_PACKAGE_HASH,
         wallet.publicKeyHex,
-        motes
+        { amountMotes: motes }
       );
       const outcome = await wallet.sendDeploy(deployJson, wallet.publicKeyHex);
       if (outcome.cancelled) {

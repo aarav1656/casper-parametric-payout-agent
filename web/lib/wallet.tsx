@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ComponentType,
   createContext,
   ReactNode,
   useCallback,
@@ -9,8 +10,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import { ClickProvider, ClickUI, ThemeModeType, useClickRef } from "@make-software/csprclick-ui";
-import { CONTENT_MODE, CSPRCLICK_EVENTS } from "@make-software/csprclick-types";
 import type { AccountType } from "@make-software/csprclick-core-types";
 import { CHAIN_NAME } from "./casper";
 
@@ -40,13 +39,37 @@ export function useWallet(): WalletState {
   return ctx;
 }
 
-/**
- * Bridges the CSPR.click SDK (only reachable via `useClickRef()` inside a
- * `<ClickProvider>`) into a plain React context so the rest of the app does not
- * need to know about the SDK's event-emitter shape.
- */
-function WalletBridge({ children }: { children: ReactNode }) {
-  const clickRef = useClickRef();
+interface ClickRefLike {
+  signIn: () => void;
+  signOut: () => void;
+  send: (deployJson: object, signingPublicKeyHex: string) => Promise<{
+    cancelled: boolean;
+    deployHash: string | null;
+    error: string | null;
+  }>;
+  getActiveAccount: () => AccountType | null;
+  on: (event: string, handler: () => void) => void;
+  off: (event: string, handler: () => void) => void;
+}
+
+interface ClickRuntime {
+  ClickProvider: ComponentType<{ options: Record<string, unknown>; children: ReactNode }>;
+  ClickUI: ComponentType<{ themeMode: string }>;
+  ThemeModeType: { dark: string };
+  useClickRef: () => ClickRefLike;
+  CONTENT_MODE: { IFRAME: string };
+  CSPRCLICK_EVENTS: Record<string, string>;
+}
+
+function WalletBridge({
+  children,
+  clickRef,
+  events,
+}: {
+  children: ReactNode;
+  clickRef: ClickRefLike;
+  events: Record<string, string>;
+}) {
   const [account, setAccount] = useState<AccountType | null>(null);
 
   useEffect(() => {
@@ -60,20 +83,24 @@ function WalletBridge({ children }: { children: ReactNode }) {
       }
     };
     const clearAccount = () => setAccount(null);
+    const signedIn = events.SIGNED_IN;
+    const switched = events.SWITCHED_ACCOUNT;
+    const signedOut = events.SIGNED_OUT;
+    const disconnected = events.DISCONNECTED;
 
     syncActiveAccount();
-    clickRef.on(CSPRCLICK_EVENTS.SIGNED_IN, syncActiveAccount);
-    clickRef.on(CSPRCLICK_EVENTS.SWITCHED_ACCOUNT, syncActiveAccount);
-    clickRef.on(CSPRCLICK_EVENTS.SIGNED_OUT, clearAccount);
-    clickRef.on(CSPRCLICK_EVENTS.DISCONNECTED, clearAccount);
+    if (signedIn) clickRef.on(signedIn, syncActiveAccount);
+    if (switched) clickRef.on(switched, syncActiveAccount);
+    if (signedOut) clickRef.on(signedOut, clearAccount);
+    if (disconnected) clickRef.on(disconnected, clearAccount);
 
     return () => {
-      clickRef.off(CSPRCLICK_EVENTS.SIGNED_IN, syncActiveAccount);
-      clickRef.off(CSPRCLICK_EVENTS.SWITCHED_ACCOUNT, syncActiveAccount);
-      clickRef.off(CSPRCLICK_EVENTS.SIGNED_OUT, clearAccount);
-      clickRef.off(CSPRCLICK_EVENTS.DISCONNECTED, clearAccount);
+      if (signedIn) clickRef.off(signedIn, syncActiveAccount);
+      if (switched) clickRef.off(switched, syncActiveAccount);
+      if (signedOut) clickRef.off(signedOut, clearAccount);
+      if (disconnected) clickRef.off(disconnected, clearAccount);
     };
-  }, [clickRef]);
+  }, [clickRef, events]);
 
   const connect = useCallback(() => {
     try {
@@ -127,21 +154,78 @@ function WalletBridge({ children }: { children: ReactNode }) {
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
 
-const unconfiguredWallet: WalletState = {
-  configured: false,
-  account: null,
-  publicKeyHex: null,
-  connect: () => console.error("[wallet] NEXT_PUBLIC_CSPR_CLICK_APP_ID is not set"),
-  disconnect: () => undefined,
-  sendDeploy: async () => ({
-    cancelled: true,
-    deployHash: null,
-    error: "Wallet is not configured (missing NEXT_PUBLIC_CSPR_CLICK_APP_ID)",
-  }),
-};
+function unavailableWallet(message: string): WalletState {
+  return {
+    configured: false,
+    account: null,
+    publicKeyHex: null,
+    connect: () => console.error(`[wallet] ${message}`),
+    disconnect: () => undefined,
+    sendDeploy: async () => ({
+      cancelled: true,
+      deployHash: null,
+      error: message,
+    }),
+  };
+}
+
+const unconfiguredWallet = unavailableWallet(
+  "Wallet is not configured (missing NEXT_PUBLIC_CSPR_CLICK_APP_ID)"
+);
+
+const loadingWallet = unavailableWallet("Wallet SDK is still loading");
+
+function RuntimeWalletBridge({
+  children,
+  runtime,
+}: {
+  children: ReactNode;
+  runtime: ClickRuntime;
+}) {
+  const clickRef = runtime.useClickRef();
+  return (
+    <WalletBridge clickRef={clickRef} events={runtime.CSPRCLICK_EVENTS}>
+      {children}
+    </WalletBridge>
+  );
+}
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const appId = process.env.NEXT_PUBLIC_CSPR_CLICK_APP_ID;
+  const [runtime, setRuntime] = useState<ClickRuntime | null>(null);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!appId) return;
+
+    let active = true;
+    (async () => {
+      try {
+        const [ui, types] = await Promise.all([
+          import("@make-software/csprclick-ui"),
+          import("@make-software/csprclick-types"),
+        ]);
+        if (!active) return;
+
+        setRuntime({
+          ClickProvider: ui.ClickProvider as ClickRuntime["ClickProvider"],
+          ClickUI: ui.ClickUI as ClickRuntime["ClickUI"],
+          ThemeModeType: ui.ThemeModeType as ClickRuntime["ThemeModeType"],
+          useClickRef: ui.useClickRef as ClickRuntime["useClickRef"],
+          CONTENT_MODE: types.CONTENT_MODE as ClickRuntime["CONTENT_MODE"],
+          CSPRCLICK_EVENTS: types.CSPRCLICK_EVENTS as ClickRuntime["CSPRCLICK_EVENTS"],
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[wallet] failed to load CSPR.click runtime:", message);
+        if (active) setRuntimeError(message);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [appId]);
 
   if (!appId) {
     return (
@@ -149,18 +233,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  if (runtimeError) {
+    return (
+      <WalletContext.Provider value={unavailableWallet(runtimeError)}>
+        {children}
+      </WalletContext.Provider>
+    );
+  }
+
+  if (!runtime) {
+    return <WalletContext.Provider value={loadingWallet}>{children}</WalletContext.Provider>;
+  }
+
   const clickOptions = {
     appName: "Parametric Payout Agent",
     appId,
-    contentMode: CONTENT_MODE.IFRAME,
+    contentMode: runtime.CONTENT_MODE.IFRAME,
     providers: ["casper-wallet", "ledger", "casperdash", "metamask-snap"],
     chainName: CHAIN_NAME,
   };
 
+  const ClickProvider = runtime.ClickProvider;
+  const ClickUI = runtime.ClickUI;
+
   return (
     <ClickProvider options={clickOptions}>
-      <ClickUI themeMode={ThemeModeType.dark} />
-      <WalletBridge>{children}</WalletBridge>
+      <ClickUI themeMode={runtime.ThemeModeType.dark} />
+      <RuntimeWalletBridge runtime={runtime}>{children}</RuntimeWalletBridge>
     </ClickProvider>
   );
 }

@@ -43,7 +43,7 @@ export default function ProofTable({ onEventsLoaded }: ProofTableProps) {
 
   useEffect(() => {
     load();
-  }, [onEventsLoaded]);
+  }, [load]);
 
   return (
     <section className={styles.card}>
